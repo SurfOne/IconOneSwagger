@@ -1,14 +1,10 @@
----
-swagger: "2.0"
+openapi: "3.0.3"
 info:
   description: "Icon1 backend spec"
   version: "1.0.5"
   title: "Swagger spec"
-host: "example.com"
-basePath: "/v1"
-schemes:
-- "https"
-- "http"
+servers:
+  - url: "https://example.com"
 components:
   schemas:
     GeneralResponse:
@@ -616,52 +612,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
-
-securityDefinitions:
-  api_key:
-    type: "apiKey"
-    name: "api_key"
-    in: "header"
-  petstore_auth:
-    type: "oauth2"
-    authorizationUrl: "https://petstore.swagger.io/oauth/authorize"
-    flow: "implicit"
-
-definitions:
-  ApiResponse:
-    type: "object"
-    properties:
-      code:
-        type: "integer"
-        format: "int32"
-      type:
-        type: "string"
-      message:
-        type: "string"
-  User:
-    type: "object"
-    properties:
-      id:
-        type: "integer"
-        format: "int64"
-      username:
-        type: "string"
-      firstName:
-        type: "string"
-      lastName:
-        type: "string"
-      email:
-        type: "string"
-      password:
-        type: "string"
-      phone:
-        type: "string"
-      userStatus:
-        type: "integer"
-        format: "int32"
-        description: "User Status"
-    xml:
-      name: "User"
 
 externalDocs:
   description: "Find out more about Swagger"
