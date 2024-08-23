@@ -7,6 +7,120 @@ servers:
   - url: "https://example.com"
 components:
   schemas:
+    Location:
+      type: string
+      example: "Guantanamo Bay"
+
+    Timestamp:
+      type: string
+      format: date-time
+
+    Id:
+      type: number
+      example: 4294967295
+
+    Dataframe:
+      type: object
+      example: {}
+
+    UserStats:
+      type: object
+      properties:
+        distance_total:
+          type: number
+          example: 15.01
+        max_y:
+          type: number
+          example: 3.13
+        max_force:
+          type: number
+          example: 21.66
+        fav_location:
+          $ref: "#/components/schemas/Location"
+        max_flow_state:
+          type: number
+          example: 12.95
+        max_speed:
+          type: number
+          example: 26.2
+        icon_points:
+          type: integer
+          example: 333
+
+    User:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          example: "John Doe"
+        stats:
+          $ref: "#/components/schemas/UserStats"
+
+    Wave:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        video_id:
+          $ref: "#/components/schemas/Id"
+        max_speed:
+          type: number
+          example: 13.43
+        max_force:
+          type: number
+          example: 21.62
+        rating:
+          type: string
+          example: "Bad"
+        distance_surfed:
+          type: number
+          example: 29.47
+        max_vert:
+          type: number
+          example: 2.74
+        max_flow_state:
+          type: number
+          example: 1.61
+
+    Session:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        user_id:
+          $ref: "#/components/schemas/Id"
+        sensor_id:
+          $ref: "#/components/schemas/Id"
+        dataframe_id:
+          oneOf:
+          - type: "string"
+            example: "12345678"
+          - $ref: "#/components/schemas/Dataframe"
+        start_time:
+          $ref: "#/components/schemas/Timestamp"
+        duration:
+          type: integer
+          example: 3600000
+        location:
+          $ref: "#/components/schemas/Location"
+        avg_rating:
+          type: string
+          example: "Good"
+        distance_surfed:
+          type: number
+          example: 1200.5
+        distance_paddled:
+          type: number
+          example: 354.2
+        links:
+          type: object
+          properties:
+            runs:
+              type: string
+              example: "/sessions/4294967295/runs"
+
     GeneralResponse:
       type: object
       properties:
@@ -93,7 +207,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GeneralResponse'
+                $ref: '#/components/schemas/User'
         '400':
           description: Bad Request
           content:
@@ -306,7 +420,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GeneralResponse'
+                $ref: '#/components/schemas/Session'
         '400':
           description: Bad Request
           content:
@@ -485,7 +599,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GeneralResponse'
+                $ref: '#/components/schemas/Wave'
         '400':
           description: Bad Request
           content:
