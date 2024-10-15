@@ -126,33 +126,45 @@ components:
       properties:
         message:
           type: string
-          example: "Success placeholder"
+          example: "Success"
+        data:
+          type: string
+          example: "Placeholder"
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Success"
+        data:
+          type: object
 
     BadRequestResponse:
       type: object
       properties:
-        error:
+        message:
           type: string
           example: "Bad Request: The server could not understand the request due to invalid syntax."
 
     UnauthorizedResponse:
       type: object
       properties:
-        error:
+        message:
           type: string
           example: "Unauthorized: The client must authenticate itself to get the requested response."
 
     ForbiddenResponse:
       type: object
       properties:
-        error:
+        message:
           type: string
           example: "Forbidden: The client does not have access rights to the content."
 
     InternalServerErrorResponse:
       type: object
       properties:
-        error:
+        message:
           type: string
           example: "Internal Server Error: The server has encountered a situation it doesn't know how to handle."
 
@@ -420,7 +432,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Session'
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Session'
         '400':
           description: Bad Request
           content:
@@ -599,7 +615,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Wave'
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Wave'
         '400':
           description: Bad Request
           content:
