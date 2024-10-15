@@ -23,9 +23,17 @@ components:
       type: object
       example: {}
 
-    UserStats:
+    User:
       type: object
       properties:
+        user_id:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          example: "johndoe@example.com"
         distance_total:
           type: number
           example: 15.01
@@ -46,17 +54,6 @@ components:
         icon_points:
           type: integer
           example: 333
-
-    User:
-      type: object
-      properties:
-        id:
-          $ref: "#/components/schemas/Id"
-        name:
-          type: string
-          example: "John Doe"
-        stats:
-          $ref: "#/components/schemas/UserStats"
 
     Wave:
       type: object
@@ -219,7 +216,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/User'
         '400':
           description: Bad Request
           content:
