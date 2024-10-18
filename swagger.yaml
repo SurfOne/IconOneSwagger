@@ -6,6 +6,16 @@ info:
 servers:
   - url: "https://example.com"
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+
   schemas:
     Location:
       type: string
@@ -165,6 +175,19 @@ components:
           type: string
           example: "Internal Server Error: The server has encountered a situation it doesn't know how to handle."
 
+    PresignedUrlResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Success"
+        data:
+          type: string
+          example: "https://<bucketname>.s3.amazonaws.com/<filepath>?<querystring>"
+
+security:
+  - BearerAuth: []
+
 paths:
   /users:
     get:
@@ -201,12 +224,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
 
-  /users/{id}:
+    post:
+      summary: Create a user
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                  example: John
+                last_name:
+                  type: string
+                  example: Doe
+                email:
+                  type: string
+                  example: johndoe@example.com
+              additionalProperties: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/GeneralResponse'
+                - properties:
+                    data:
+                      type: string
+                      example: ""
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerErrorResponse'
+
+  /users/{user_id}:
     get:
       summary: Get user by ID
       parameters:
         - in: path
-          name: id
+          name: user_id
           required: true
           schema:
             type: string
@@ -246,57 +327,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
 
-    post:
-      summary: Create or update a user by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GeneralResponse'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GeneralResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BadRequestResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InternalServerErrorResponse'
-
     put:
       summary: Update user by ID
       parameters:
         - in: path
-          name: id
+          name: user_id
           required: true
           schema:
             type: string
@@ -338,26 +373,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
 
-  /upload:
+  /users/{user_id}/get-upload-url:
     post:
-      summary: Upload a file
+      summary: Retrieve a temporary URL for uploading a session data file. Send a further PUT request to the generated URL along with the binary file as the request body, and the file is successfully uploaded.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          json:
             schema:
               type: object
               properties:
-                file:
+                file_id:
                   type: string
-                  format: binary
+                  example: example-file.bin
+                  description: File ID or name that is going to be used in the generated upload link. The ID cannot be changed after the link creation, and needs to be set here instead.
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GeneralResponse'
+                $ref: '#/components/schemas/PresignedUrlResponse'
         '400':
           description: Bad Request
           content:
@@ -382,6 +424,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
+
 
   /sessions:
     get:
@@ -747,6 +790,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
+
+
+  /users{user_id}/sessions/{session_id}/runs/{run_id}/video:
+    post:
+      summary: Upload a video
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: video
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerErrorResponse'
+
 
 externalDocs:
   description: "Find out more about Swagger"
