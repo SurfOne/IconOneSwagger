@@ -11,10 +11,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: X-API-KEY
+    BasicAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Basic
 
   schemas:
     Location:
@@ -25,19 +25,23 @@ components:
       type: string
       format: date-time
 
-    Id:
-      type: number
-      example: 4294967295
+    UserId:
+      type: string
+      example: "2cbcf0d5-79f8-4ca8-ba53-192fed1a5fe0"
 
-    Dataframe:
-      type: object
-      example: {}
+    SensorId:
+      type: string
+      example: "41961612"
+
+    Id:
+      type: string
+      example: "2024-10-21T14:51:22Z"
 
     User:
       type: object
       properties:
         user_id:
-          $ref: "#/components/schemas/Id"
+          $ref: "#/components/schemas/UserId"
         name:
           type: string
           example: "John Doe"
@@ -97,14 +101,11 @@ components:
         id:
           $ref: "#/components/schemas/Id"
         user_id:
-          $ref: "#/components/schemas/Id"
+          $ref: "#/components/schemas/UserId"
         sensor_id:
-          $ref: "#/components/schemas/Id"
+          $ref: "#/components/schemas/SensorId"
         dataframe_id:
-          oneOf:
-          - type: "string"
-            example: "12345678"
-          - $ref: "#/components/schemas/Dataframe"
+          $ref: "#/components/schemas/SensorId"
         start_time:
           $ref: "#/components/schemas/Timestamp"
         duration:
@@ -126,7 +127,7 @@ components:
           properties:
             runs:
               type: string
-              example: "/sessions/4294967295/runs"
+              example: "/sessions/2024-10-21T14:51:22Z/runs"
 
     GeneralResponse:
       type: object
@@ -190,44 +191,10 @@ security:
 
 paths:
   /users:
-    get:
-      summary: Get list of users
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GeneralResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BadRequestResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InternalServerErrorResponse'
-
     post:
       summary: Create a user
       security:
-        - ApiKeyAuth: []
+        - BasicAuth: []
       requestBody:
         required: true
         content:
@@ -235,16 +202,22 @@ paths:
             schema:
               type: object
               properties:
-                first_name:
-                  type: string
-                  example: John
-                last_name:
-                  type: string
-                  example: Doe
-                email:
-                  type: string
-                  example: johndoe@example.com
-              additionalProperties: true
+                content:
+                  type: object
+                  properties:
+                    customer:
+                      type: object
+                      properties:
+                        first_name:
+                          type: string
+                          example: John
+                        last_name:
+                          type: string
+                          example: Doe
+                        email:
+                          type: string
+                          example: johndoe@example.com
+                      additionalProperties: true
       responses:
         '200':
           description: OK
@@ -340,7 +313,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GeneralResponse'
+              allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        type: string
+                        example: ""
       responses:
         '200':
           description: OK
@@ -426,16 +404,55 @@ paths:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
 
 
-  /sessions:
+  /users/{user_id}/sessions:
     get:
       summary: Get list of sessions
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          description: The number of items to skip before starting to collect the result set.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description: The numbers of items to return.
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GeneralResponse'
+                allOf:
+                  - $ref: '#/components/schemas/GeneralResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Session'
+              examples:
+                success:
+                  value:
+                    message: "Success"
+                    data:
+                      - id: "2024-10-21T14:51:22Z"
+                        user_id: "2cbcf0d5-79f8-4ca8-ba53-192fed1a5fe0"
+                        sensor_id: "41961612"
+                        dataframe_id: "12345678"
+                        start_time: "2024-10-21T14:51:22Z"
+                        duration: 3600000
+                        location: "Guantanamo Bay"
+                        avg_rating: "Good"
+                        distance_surfed: 1200.5
+                        distance_paddled: 354.2
+                        links:
+                          runs: "/sessions/2024-10-21T14:51:22Z/runs"
         '400':
           description: Bad Request
           content:
@@ -461,12 +478,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
 
-  /sessions/{id}:
+  /users/{user_id}/sessions/{session_id}:
     get:
       summary: Get session by ID
       parameters:
         - in: path
-          name: id
+          name: user_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: session_id
           required: true
           schema:
             type: string
@@ -506,114 +528,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
 
-    post:
-      summary: Create or update a session by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GeneralResponse'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GeneralResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BadRequestResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InternalServerErrorResponse'
-
-    put:
-      summary: Update session by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GeneralResponse'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GeneralResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BadRequestResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InternalServerErrorResponse'
-
-  /sessions/{id}/runs:
+  /users/{user_id}/sessions/{session_id}/runs:
     get:
       summary: Get runs for session by ID
       parameters:
         - in: path
-          name: id
+          name: user_id
           required: true
           schema:
             type: string
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          description: The number of items to skip before starting to collect the result set.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description: The numbers of items to return.
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GeneralResponse'
+                allOf:
+                  - $ref: '#/components/schemas/GeneralResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Wave'
+              examples:
+                success:
+                  value:
+                    message: "Success"
+                    data:
+                      - id: "2cbcf0d5-79f8-4ca8-ba53-192fed1a5fe0"
+                        video_id: "2024-10-21T14:51:22Z"
+                        max_speed: 13.43
+                        max_force: 21.62
+                        rating: "Bad"
+                        distance_surfed: 29.47
+                        max_vert: 2.74
+                        max_flow_state: 1.61
+
         '400':
           description: Bad Request
           content:
@@ -639,17 +604,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
 
-  /sessions/{id}/runs/{runid}:
+  /users/{user_id}/sessions/{session_id}/runs/{run_id}:
     get:
       summary: Get run by ID for a specific session
       parameters:
         - in: path
-          name: id
+          name: user_id
           required: true
           schema:
             type: string
         - in: path
-          name: runid
+          name: session_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: run_id
           required: true
           schema:
             type: string
@@ -689,112 +659,75 @@ paths:
               schema:
                 $ref: '#/components/schemas/InternalServerErrorResponse'
 
-    post:
-      summary: Create or update a run by ID for a specific session
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: runid
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GeneralResponse'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GeneralResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BadRequestResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InternalServerErrorResponse'
-
-    put:
-      summary: Update run by ID for a specific session
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: runid
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GeneralResponse'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GeneralResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BadRequestResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InternalServerErrorResponse'
-
-
   /users{user_id}/sessions/{session_id}/runs/{run_id}/video:
+    get:
+      summary: Retrieve a temporary URL for downloading the rendered video for a run. Send a further GET request to the generated URL, and the file is downloaded.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignedUrlResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerErrorResponse'
+
     post:
-      summary: Upload a video
+      summary: Retrieve a temporary URL for uploading a video for a run. Send a further PUT request to the generated URL along with the video file as the request body, and the file is successfully uploaded.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -811,7 +744,62 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GeneralResponse'
+                $ref: '#/components/schemas/PresignedUrlResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerErrorResponse'
+
+    delete:
+      summary: Delete uploaded and rendered videos from a run
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/GeneralResponse'
+                  - properties:
+                      data:
+                        type: string
+                        example: ""
         '400':
           description: Bad Request
           content:
